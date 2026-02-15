@@ -5,6 +5,10 @@ networks:
 
 services:
   web:
+    build:
+      context: ./web
+      args:
+        - VITE_API_MODE=local
     image: ghcr.io/auto-novel/auto-novel-web:latest
     ports:
       - 8765:80
@@ -15,6 +19,7 @@ services:
     restart: always
 
   api:
+    build: ./server
     image: ghcr.io/auto-novel/auto-novel-server:latest
     networks:
       default:
@@ -25,6 +30,7 @@ services:
       - elasticsearch
       - redis
     environment:
+      - LOCAL_DEV=true
       - HTTPS_PROXY
       - MAILGUN_API_KEY
       - MAILGUN_API_URL

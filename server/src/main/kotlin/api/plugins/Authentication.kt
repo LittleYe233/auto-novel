@@ -119,8 +119,9 @@ fun Route.authenticateDb(
     optional: Boolean = false,
     build: Route.() -> Unit,
 ): Route {
+    val isLocalDev = System.getenv("LOCAL_DEV") == "true"
     return authenticate(
-        strategy = if (optional) AuthenticationStrategy.Optional else AuthenticationStrategy.FirstSuccessful,
+        strategy = if (optional || isLocalDev) AuthenticationStrategy.Optional else AuthenticationStrategy.FirstSuccessful,
         build = build,
     ).apply {
         install(PostAuthenticationInterceptors)
@@ -131,13 +132,26 @@ private val AuthenticatedUserKey = AttributeKey<User>("AuthenticatedUserKey")
 
 private val PostAuthenticationInterceptors = createRouteScopedPlugin(name = "User Validator") {
     val userRepo = application.get<UserRepository>()
+    val isLocalDev = System.getenv("LOCAL_DEV") == "true"
 
     on(AuthenticationChecked) { call ->
-        call.principal<JWTPrincipal>()?.let { principal ->
+        val principal = call.principal<JWTPrincipal>()
+        if (principal == null && isLocalDev) {
             val user = User(
-                id = userRepo.getId(principal.subject!!),
-                username = principal.subject!!,
-                role = when (principal["role"]) {
+                id = "000000000000000000000000",
+                username = "LocalAdmin",
+                role = UserRole.Admin,
+                createdAt = Instant.fromEpochSeconds(0),
+            )
+            call.attributes.put(AuthenticatedUserKey, user)
+            return@on
+        }
+
+        principal?.let {
+            val user = User(
+                id = userRepo.getId(it.subject!!),
+                username = it.subject!!,
+                role = when (it["role"]) {
                     "admin" -> UserRole.Admin
                     "trusted" -> UserRole.Trusted
                     "member" -> UserRole.Member
@@ -145,7 +159,7 @@ private val PostAuthenticationInterceptors = createRouteScopedPlugin(name = "Use
                     else -> UserRole.Banned
                 },
                 createdAt = Instant.fromEpochSeconds(
-                    principal.getClaim("crat", Long::class)!!
+                    it.getClaim("crat", Long::class)!!
                 ),
             )
             if (user.role === UserRole.Banned) {

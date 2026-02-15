@@ -11,7 +11,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
-  const apiMode = env.VITE_API_MODE;
+  const apiMode = env.VITE_API_MODE || process.env.VITE_API_MODE;
   const apiUrl = (() => {
     if (apiMode === 'remote') {
       return 'https://n.novelia.cc';

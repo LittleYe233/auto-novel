@@ -7,7 +7,7 @@ services:
   web:
     image: ghcr.io/auto-novel/auto-novel-web:latest
     ports:
-      - 80:80
+      - 8765:80
     volumes:
       - ./data/files-temp:/data/files-temp
       - ./data/files-wenku:/data/files-wenku
@@ -16,6 +16,10 @@ services:
 
   api:
     image: ghcr.io/auto-novel/auto-novel-server:latest
+    networks:
+      default:
+        aliases:
+          - server
     depends_on:
       - mongo
       - elasticsearch
